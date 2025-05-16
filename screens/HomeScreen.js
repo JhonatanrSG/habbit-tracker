@@ -1,67 +1,100 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, Button, FlatList, ActivityIndicator, StyleSheet } from "react-native";
-import { auth } from "../config/firebaseConfig";
-import { useNavigation } from "@react-navigation/native";
-import RSSParser from 'react-native-rss-parser';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import axios from 'axios';
+import * as Linking from 'expo-linking';
 
-export default function HomeScreen() {
-  const navigation = useNavigation();
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
+const HomeScreen = () => {
+  const [noticias, setNoticias] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    fetch('https://newsnetwork.mayoclinic.org/feed/')
-      .then((response) => response.text())
-      .then((responseData) => RSSParser.parse(responseData))
-      .then((rss) => {
-        setArticles(rss.items);
-        setLoading(false);
-      });
+    obtenerNoticias();
   }, []);
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Button
-          onPress={() => {
-            auth.signOut();
-            navigation.navigate("Login");
-          }}
-          title="Cerrar sesión"
-        />
-      ),
-    });
-  }, [navigation]);
+  const obtenerNoticias = async () => {
+    try {
+      const response = await axios.get('https://api.rss2json.com/v1/api.json?rss_url=https://www.eltiempo.com/rss/tecnosfera.xml');
+      setNoticias(response.data.items);
+    } catch (error) {
+      console.error('Error al obtener noticias:', error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      {item.enclosures && item.enclosures[0] && item.enclosures[0].url ? (
+        <Image source={{ uri: item.enclosures[0].url }} style={styles.image} />
+      ) : null}
+
+      <Text style={styles.articleTitle}>{item.title}</Text>
+      <Text>{item.pubDate}</Text>
+
+      <TouchableOpacity
+        onPress={() => Linking.openURL(item.link)}  // 👉 Aquí se abre el navegador con el link de la noticia
+      >
+        <Text style={styles.readMore}>Ver más</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (cargando) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text>Cargando noticias...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Bienvenido a Habit Tracker</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : (
-        <FlatList
-          data={articles}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.article}>
-              <Text style={styles.articleTitle}>{item.title}</Text>
-              <Text>{item.published}</Text>
-            </View>
-          )}
-        />
-      )}
-      <Button
-        title="Nuevo Hábito"
-        onPress={() => navigation.navigate("CreateHabit")}
+      <FlatList
+        data={noticias}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: "center" },
-  article: { marginBottom: 10 },
-  articleTitle: { fontSize: 18, fontWeight: "bold" },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  list: {
+    padding: 15,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 15,
+    elevation: 3,
+  },
+  image: {
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  articleTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  readMore: {
+    color: '#007bff',
+    marginTop: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
+export default HomeScreen;

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, TextInput, Button, StyleSheet, Text, Switch, Platform } from "react-native";
-import { db, auth } from "../config/firebaseConfig";
+import { db, auth } from "../src/firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -133,4 +133,3 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", marginBottom: 10, justifyContent: "space-between" },
   pickerRow: { marginBottom: 10 },
 });
-
